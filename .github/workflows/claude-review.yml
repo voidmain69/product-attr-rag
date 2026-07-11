@@ -1,0 +1,37 @@
+# Automatic code review of every PR by Claude.
+# Requires the ANTHROPIC_API_KEY repository secret:
+#   gh secret set ANTHROPIC_API_KEY --body "<key>"
+
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+jobs:
+  review:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            /review
+            Review this PR against the project rules in CLAUDE.md, most importantly
+            the invariant principles in section 2 (provenance everywhere, cost
+            cascade, idempotency, versioning-not-overwrite, crawl politeness,
+            honest "unknown"). Also check correctness, edge cases and that new
+            logic has tests per docs/09-testing-requirements.md. Post concrete,
+            actionable inline comments; do not comment on style the linter covers.
+          claude_args: "--max-turns 25"
