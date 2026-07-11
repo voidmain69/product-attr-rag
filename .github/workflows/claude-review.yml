@@ -18,11 +18,18 @@ jobs:
       issues: write
       id-token: write
     steps:
+      # secrets are not available in job-level `if`, so gate via a step output
+      - name: Check API key present
+        id: key
+        run: echo "present=${{ secrets.ANTHROPIC_API_KEY != '' }}" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
+        if: steps.key.outputs.present == 'true'
         with:
           fetch-depth: 0
 
       - name: Claude review
+        if: steps.key.outputs.present == 'true'
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
