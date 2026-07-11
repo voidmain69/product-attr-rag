@@ -1,4 +1,9 @@
-# Automatic code review of every PR by Claude.
+# Claude code review — OPTIONAL, OFF BY DEFAULT.
+#
+# It does NOT run on ordinary PR events. Trigger it explicitly, per PR:
+#   * add the `claude-review` label to a PR, or
+#   * run it manually: Actions -> "Claude Code Review" -> Run workflow (enter PR number).
+#
 # Requires the ANTHROPIC_API_KEY repository secret:
 #   gh secret set ANTHROPIC_API_KEY --body "<key>"
 
@@ -6,11 +11,19 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review]
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to review"
+        required: true
 
 jobs:
   review:
-    if: ${{ !github.event.pull_request.draft }}
+    # Off by default: only the `claude-review` label or a manual dispatch starts it.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'claude-review')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -23,10 +36,21 @@ jobs:
         id: key
         run: echo "present=${{ secrets.ANTHROPIC_API_KEY != '' }}" >> "$GITHUB_OUTPUT"
 
+      - name: No API key — nothing to do
+        if: steps.key.outputs.present != 'true'
+        run: echo "::notice::ANTHROPIC_API_KEY is not set; skipping Claude review."
+
       - uses: actions/checkout@v7
         if: steps.key.outputs.present == 'true'
         with:
           fetch-depth: 0
+
+      # Manual dispatch has no PR context; check out the requested PR head.
+      - name: Check out PR (manual dispatch)
+        if: steps.key.outputs.present == 'true' && github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr checkout ${{ github.event.inputs.pr_number }}
 
       - name: Claude review
         if: steps.key.outputs.present == 'true'

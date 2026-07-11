@@ -36,7 +36,7 @@ docs(rag): clarify disputed-fact answer format
 1. PR завжди у **`develop`** (крім релізних PR `develop → main`).
 2. Малий і сфокусований: один PR = одна зміна одного шару. Зміна міжшарового контракту (`attrpipe.domain`, схема БД) — окремий PR разом з оновленням відповідного `docs/NN-*.md`.
 3. Заповнити шаблон PR: що, навіщо, як тестувалось.
-4. Обов'язково зелені: CI (ruff, format, mypy, pytest) + автоматичне Claude-ревью. Для змін у extraction/normalization/rag — прогін golden set (див. `docs/09-testing-requirements.md`).
+4. Обов'язково зелені: CI (ruff, format, mypy, pytest). Claude-ревью — опційне, вимкнене за замовчуванням; за потреби додайте PR мітку `claude-review` або запустіть workflow вручну. Для змін у extraction/normalization/rag — прогін golden set (див. `docs/09-testing-requirements.md`).
 5. Мерж у `develop` — **squash merge** (чиста лінійна історія). Релізний PR у `main` — **merge commit** + тег `vX.Y.Z`.
 6. Гілка після мержу видаляється автоматично.
 
