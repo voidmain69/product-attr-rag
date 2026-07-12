@@ -74,6 +74,16 @@ class HitlRepository:
             )
             return [HitlItem.model_validate(row) for row in cur.fetchall()]
 
+    def get(self, item_id: str) -> HitlItem | None:
+        with self._conn.cursor() as cur:
+            cur.execute(
+                "SELECT item_id, queue, payload, priority, status FROM hitl_queue"
+                " WHERE item_id = %s",
+                (item_id,),
+            )
+            row = cur.fetchone()
+            return HitlItem.model_validate(row) if row is not None else None
+
     def count_open(self) -> dict[str, int]:
         with self._conn.cursor() as cur:
             cur.execute(

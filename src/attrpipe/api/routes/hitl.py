@@ -9,7 +9,7 @@ from typing import Any, get_args
 
 from fastapi import APIRouter, HTTPException
 
-from attrpipe.api.deps import HitlRepositoryDep
+from attrpipe.api.deps import HitlRepositoryDep, MappingRepositoryDep
 from attrpipe.api.metrics import hitl_queue_depth
 from attrpipe.storage import HitlItem, HitlQueue
 
@@ -38,9 +38,26 @@ def list_queue(queue: str, hitl: HitlRepositoryDep, limit: int = 50) -> list[Hit
 
 
 @router.post("/{item_id}/resolve")
-def resolve_item(item_id: str, body: dict[str, Any], hitl: HitlRepositoryDep) -> dict[str, str]:
-    resolution = body.get("resolution", {})
-    resolved_by = body.get("resolved_by", "api")
-    if not hitl.resolve(item_id, resolution, resolved_by=resolved_by):
+def resolve_item(
+    item_id: str,
+    body: dict[str, Any],
+    hitl: HitlRepositoryDep,
+    mappings: MappingRepositoryDep,
+) -> dict[str, Any]:
+    item = hitl.get(item_id)
+    if item is None or item.status != "open":
         raise HTTPException(status_code=404, detail="item not found or already resolved")
-    return {"status": "resolved"}
+    resolution = body.get("resolution") or {}
+    resolved_by = body.get("resolved_by", "api")
+    hitl.resolve(item_id, resolution, resolved_by=resolved_by)
+
+    # Close the learning loop: a confirmed attribute mapping is written to the
+    # dictionary so the same raw attribute maps automatically next time (docs/03 §2.4).
+    learned: dict[str, str] | None = None
+    attribute_key = resolution.get("attribute_key") if isinstance(resolution, dict) else None
+    raw_attribute = item.payload.get("raw_attribute")
+    if item.queue == "attribute_mapping" and attribute_key and isinstance(raw_attribute, str):
+        mappings.upsert(raw_attribute, attribute_key, confirmed_by=resolved_by)
+        learned = {"raw_attribute": raw_attribute, "attribute_key": attribute_key}
+
+    return {"status": "resolved", "learned": learned}
