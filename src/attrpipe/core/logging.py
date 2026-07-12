@@ -16,6 +16,11 @@ from attrpipe.core.config import get_settings
 
 def configure_logging(service: str | None = None) -> None:
     settings = get_settings()
+    # Logs carry non-ASCII (multilingual raw attributes). Force UTF-8 on stdout so a
+    # legacy console encoding (e.g. Windows cp1252) cannot crash a log write.
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if callable(reconfigure):
+        reconfigure(encoding="utf-8", errors="backslashreplace")
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
