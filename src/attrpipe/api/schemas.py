@@ -56,6 +56,15 @@ class ProductOut(BaseModel):
         return cls(**record.model_dump())
 
 
+class AnswerIn(BaseModel):
+    question: str
+    product_id: str | None = None
+    gtin: str | None = None
+    mpn: str | None = None
+    brand: str | None = None
+    model: str | None = None
+
+
 class AttributeOut(BaseModel):
     attribute_key: str
     category_path: list[str]

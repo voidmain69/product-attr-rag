@@ -5,9 +5,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 from attrpipe.api.app import create_app
-from attrpipe.api.deps import get_fact_repository, get_product_repository
+from attrpipe.api.deps import (
+    get_answer_service,
+    get_fact_repository,
+    get_product_repository,
+)
 from attrpipe.domain import CanonicalFact, Provenance
 from attrpipe.domain.facts import DataType, ExtractionTier
+from attrpipe.rag import AnswerService
 from attrpipe.storage import ProductRecord
 
 
@@ -66,11 +71,26 @@ class FakeProductRepository:
         )
 
 
+class FakeResolver:
+    def resolve(
+        self,
+        *,
+        gtin: str | None = None,
+        mpn: str | None = None,
+        brand: str | None = None,
+        model: str | None = None,
+    ) -> str | None:
+        return "prd_1" if (brand == "Acme" and model == "Model X") else None
+
+
 @pytest.fixture
 def client() -> Iterator[TestClient]:
     app = create_app()
     app.dependency_overrides[get_fact_repository] = FakeFactRepository
     app.dependency_overrides[get_product_repository] = FakeProductRepository
+    app.dependency_overrides[get_answer_service] = lambda: AnswerService(
+        FakeResolver(), FakeFactRepository()
+    )
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
@@ -116,3 +136,28 @@ class TestExactLookup:
     def test_missing_fact_is_honest_404(self, client: TestClient) -> None:
         # No fabricated value when the fact is absent (CLAUDE.md §2.6).
         assert client.get("/v1/products/prd_1/facts/waterproof").status_code == 404
+
+
+class TestAnswer:
+    def test_exact_lookup_answer(self, client: TestClient) -> None:
+        body = client.post(
+            "/v1/answer",
+            json={"question": "what is the weight?", "brand": "Acme", "model": "Model X"},
+        ).json()
+        assert body["found"] is True
+        assert body["route"] == "exact_lookup"
+        assert body["canonical_value"] == 2300.0
+        assert body["citation"]["source_url"].startswith("https://example-vendor.com")
+
+    def test_ambiguous_question(self, client: TestClient) -> None:
+        body = client.post("/v1/answer", json={"question": "is it good?"}).json()
+        assert body["route"] == "ambiguous"
+        assert body["found"] is False
+
+    def test_unknown_product_refused(self, client: TestClient) -> None:
+        body = client.post(
+            "/v1/answer",
+            json={"question": "what is the weight?", "brand": "Nobody", "model": "X"},
+        ).json()
+        assert body["route"] == "refused"
+        assert body["found"] is False
