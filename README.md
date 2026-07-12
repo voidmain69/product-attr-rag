@@ -76,24 +76,31 @@ Sitemaps/Feeds → Discovery → Fetcher pool → Raw Store (S3/MinIO)
       → RAG (exact lookup → hybrid retrieval → generation with citations)
 ```
 
-### Service API (target design)
+**Implemented** (all layers): static fetch with robots/rate-limit · extraction
+Tier 1–4 (JSON-LD · Shopify · DOM · grounded LLM) · normalization with
+dictionary mapping, unit conversion, conflict resolution and a HITL learning
+loop · append-only fact store + Raw Store + self-contained chunks · RAG route A
+(exact) + route B (hybrid retrieval) · human-in-the-loop queues · quality
+metrics with a golden-set regression gate · Prometheus/Grafana telemetry.
+
+### Service API
 
 The answering service (`attrpipe.api`) exposes the API below (design per
-[docs/05](docs/05-rag-pipeline.md)). The exact-lookup MVP is **live** (run
-`python tools/dev.py serve`); `POST` answer/compare/filter routes are the next
-increment. Status: ✅ live · 🚧 planned.
+[docs/05](docs/05-rag-pipeline.md)) — all routes are **live** (run
+`python tools/dev.py serve`).
 
-| Method | Endpoint | Status | Description |
-|---|---|---|---|
-| `GET` | `/v1/products/{product_id}` | ✅ | Resolved product entity: brand, model, category, identifiers, source URLs. |
-| `GET` | `/v1/products/{product_id}/facts` | ✅ | All effective canonical facts for a product (versioned, with provenance). |
-| `GET` | `/v1/products/{product_id}/facts/{attribute_key}` | ✅ | A single attribute value with provenance + date, or an honest 404. |
-| `GET` | `/v1/attributes` | ✅ | Canonical attribute ontology: categories, data types, units, synonyms. |
-| `GET` | `/healthz` | ✅ | Liveness / readiness probe. |
-| `GET` | `/metrics` | ✅ | Prometheus metrics (see [docs/08](docs/08-telemetry-standards.md)). |
-| `POST` | `/v1/answer` | 🚧 | Answer a natural-language question about a product attribute; fact-first routing, returns value + unit + citation + date, or an honest "unknown". |
-| `POST` | `/v1/compare` | 🚧 | Compare one or more attributes across several products; returns a table in canonical units. |
-| `POST` | `/v1/filter` | 🚧 | Return products matching structured attribute constraints (e.g. `ip_rating=IP67 AND net_weight<300`). |
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/v1/products/{product_id}` | Resolved product entity: brand, model, category, identifiers, source URLs. |
+| `GET` | `/v1/products/{product_id}/facts` | All effective canonical facts for a product (versioned, with provenance). |
+| `GET` | `/v1/products/{product_id}/facts/{attribute_key}` | A single attribute value with provenance + date, or an honest 404. |
+| `POST` | `/v1/answer` | Answer a natural-language question; fact-first routing — exact lookup (route A) or hybrid retrieval (route B) — with citation, or an honest "unknown". |
+| `POST` | `/v1/compare` | Compare one or more attributes across several products; a table in canonical units. |
+| `POST` | `/v1/filter` | Products matching structured attribute constraints (e.g. `ip_rating=IP67 AND net_weight<300`). |
+| `GET` | `/v1/attributes` | Canonical attribute ontology: categories, data types, units, synonyms. |
+| `GET` | `/v1/hitl` · `/v1/hitl/{queue}` | Human-in-the-loop moderation queues + counts (docs/06). |
+| `POST` | `/v1/hitl/{item_id}/resolve` | Resolve a queued exception; confirmed attribute mappings feed the dictionary. |
+| `GET` | `/healthz` · `/metrics` | Liveness probe and Prometheus metrics (see [docs/08](docs/08-telemetry-standards.md)). |
 | `GET` | `/healthz` | Liveness / readiness probe. |
 | `GET` | `/metrics` | Prometheus metrics (see [docs/08](docs/08-telemetry-standards.md)). |
 
@@ -220,24 +227,24 @@ Sitemaps/Feeds → Discovery → Fetcher pool → Raw Store (S3/MinIO)
       → RAG (exact lookup → hybrid retrieval → generation з citations)
 ```
 
-### API сервісу (цільовий дизайн)
+### API сервісу
 
 Сервіс відповідей (`attrpipe.api`) надає API нижче (дизайн за
-[docs/05](docs/05-rag-pipeline.md)). Exact-lookup MVP **вже працює** (`python
-tools/dev.py serve`); `POST` answer/compare/filter — наступний інкремент.
-Статус: ✅ живе · 🚧 заплановано.
+[docs/05](docs/05-rag-pipeline.md)) — усі маршрути **вже працюють** (`python
+tools/dev.py serve`).
 
-| Метод | Ендпоінт | Статус | Опис |
-|---|---|---|---|
-| `GET` | `/v1/products/{product_id}` | ✅ | Розв'язана сутність товару: бренд, модель, категорія, ідентифікатори, URL-джерела. |
-| `GET` | `/v1/products/{product_id}/facts` | ✅ | Усі діючі канонічні факти товару (версіоновані, з провенансом). |
-| `GET` | `/v1/products/{product_id}/facts/{attribute_key}` | ✅ | Значення одного атрибута з провенансом і датою, або чесний 404. |
-| `GET` | `/v1/attributes` | ✅ | Канонічна онтологія атрибутів: категорії, типи даних, одиниці, синоніми. |
-| `GET` | `/healthz` | ✅ | Проба liveness / readiness. |
-| `GET` | `/metrics` | ✅ | Метрики Prometheus (див. [docs/08](docs/08-telemetry-standards.md)). |
-| `POST` | `/v1/answer` | 🚧 | Відповідь на запит природною мовою про характеристику; fact-first маршрутизація, повертає значення + одиницю + цитату + дату, або чесне «невідомо». |
-| `POST` | `/v1/compare` | 🚧 | Порівняння одного чи кількох атрибутів для кількох товарів; повертає таблицю в канонічних одиницях. |
-| `POST` | `/v1/filter` | 🚧 | Повертає товари за структурованими умовами атрибутів (напр. `ip_rating=IP67 AND net_weight<300`). |
+| Метод | Ендпоінт | Опис |
+|---|---|---|
+| `GET` | `/v1/products/{product_id}` | Розв'язана сутність товару: бренд, модель, категорія, ідентифікатори, URL-джерела. |
+| `GET` | `/v1/products/{product_id}/facts` | Усі діючі канонічні факти товару (версіоновані, з провенансом). |
+| `GET` | `/v1/products/{product_id}/facts/{attribute_key}` | Значення одного атрибута з провенансом і датою, або чесний 404. |
+| `POST` | `/v1/answer` | Відповідь природною мовою; fact-first маршрутизація — exact lookup (route A) або hybrid retrieval (route B) — з цитатою, або чесне «невідомо». |
+| `POST` | `/v1/compare` | Порівняння атрибутів кількох товарів; таблиця в канонічних одиницях. |
+| `POST` | `/v1/filter` | Товари за структурованими умовами атрибутів (напр. `ip_rating=IP67 AND net_weight<300`). |
+| `GET` | `/v1/attributes` | Канонічна онтологія атрибутів: категорії, типи даних, одиниці, синоніми. |
+| `GET` | `/v1/hitl` · `/v1/hitl/{queue}` | Черги human-in-the-loop модерації + лічильники (docs/06). |
+| `POST` | `/v1/hitl/{item_id}/resolve` | Резолв винятку з черги; підтверджені мапінги атрибутів ідуть у словник. |
+| `GET` | `/healthz` · `/metrics` | Проба liveness та метрики Prometheus (див. [docs/08](docs/08-telemetry-standards.md)). |
 
 ### Документація
 
