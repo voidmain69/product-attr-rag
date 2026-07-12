@@ -7,6 +7,7 @@ ranking (docs/04 §5). Chunks are derived data: a product's chunk is regenerated
 (docs/04 §4.3).
 """
 
+from datetime import datetime
 from typing import Any
 
 import psycopg
@@ -22,6 +23,8 @@ class ChunkHit(BaseModel):
     body: str
     brand: str | None
     attribute_keys: list[str]
+    source_url: str | None
+    fetched_at: datetime | None
     distance: float
 
 
@@ -81,8 +84,8 @@ class ChunkRepository:
         params.append(limit)
         with self._conn.cursor() as cur:
             cur.execute(
-                "SELECT chunk_id, product_id, body, brand, attribute_keys,"
-                " embedding <=> %s::vector AS distance FROM chunks"
+                "SELECT chunk_id, product_id, body, brand, attribute_keys, source_url,"
+                " fetched_at, embedding <=> %s::vector AS distance FROM chunks"
                 f" WHERE {' AND '.join(clauses)} ORDER BY distance LIMIT %s",
                 params,
             )

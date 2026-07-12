@@ -10,8 +10,7 @@ import psycopg
 import pytest
 from psycopg.rows import dict_row
 
-from attrpipe.storage import Chunk, ChunkRepository
-from tests.support.fake_embedder import HashingEmbedder
+from attrpipe.storage import Chunk, ChunkRepository, HashingEmbedder
 
 pytestmark = pytest.mark.integration
 
