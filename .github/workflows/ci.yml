@@ -23,7 +23,7 @@ jobs:
           cache: pip
 
       - name: Install
-        run: pip install -e .[dev]
+        run: pip install -e .[dev,db]  # db extra so mypy can typecheck the storage layer
 
       - name: Lint (ruff)
         run: ruff check src tests tools
