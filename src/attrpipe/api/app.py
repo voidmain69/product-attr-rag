@@ -10,7 +10,7 @@ from fastapi.responses import PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from attrpipe import __version__
-from attrpipe.api.routes import answer, attributes, products
+from attrpipe.api.routes import answer, attributes, products, queries
 from attrpipe.core.logging import configure_logging
 
 
@@ -24,6 +24,7 @@ def create_app() -> FastAPI:
     app.include_router(products.router)
     app.include_router(attributes.router)
     app.include_router(answer.router)
+    app.include_router(queries.router)
 
     @app.get("/healthz", tags=["ops"])
     def healthz() -> dict[str, str]:

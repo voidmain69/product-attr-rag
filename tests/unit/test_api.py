@@ -54,6 +54,12 @@ class FakeFactRepository:
             return None
         return next((f for f in FACTS if f.attribute_key == attribute_key), None)
 
+    def filter_products(self, constraints: object, limit: int = 100) -> list[str]:
+        return ["prd_1"]
+
+    def compare(self, product_ids: list[str], attribute_keys: list[str]) -> list[CanonicalFact]:
+        return [f for f in FACTS if f.attribute_key in attribute_keys and "prd_1" in product_ids]
+
 
 class FakeProductRepository:
     def get(self, product_id: str) -> ProductRecord | None:
@@ -161,3 +167,23 @@ class TestAnswer:
         ).json()
         assert body["route"] == "refused"
         assert body["found"] is False
+
+
+class TestQueries:
+    def test_filter(self, client: TestClient) -> None:
+        body = client.post(
+            "/v1/filter",
+            json={"constraints": [{"attribute_key": "net_weight", "op": "lt", "value": 3000}]},
+        ).json()
+        assert body["product_ids"] == ["prd_1"]
+        assert body["count"] == 1
+
+    def test_compare_builds_table(self, client: TestClient) -> None:
+        body = client.post(
+            "/v1/compare",
+            json={"product_ids": ["prd_1", "prd_2"], "attribute_keys": ["net_weight", "ip_rating"]},
+        ).json()
+        rows = {r["product_id"]: r for r in body["rows"]}
+        assert rows["prd_1"]["attributes"]["net_weight"]["canonical_value"] == 2300.0
+        assert rows["prd_1"]["attributes"]["net_weight"]["canonical_unit"] == "g"
+        assert rows["prd_2"]["attributes"] == {}  # no facts -> empty, not fabricated
