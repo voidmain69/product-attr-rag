@@ -23,7 +23,7 @@ jobs:
           cache: pip
 
       - name: Install
-        run: pip install -e .[dev]
+        run: pip install -e .[dev,db,api]  # db+api extras so mypy/tests cover those layers
 
       - name: Lint (ruff)
         run: ruff check src tests tools
