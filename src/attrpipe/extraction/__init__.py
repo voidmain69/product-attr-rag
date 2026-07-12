@@ -4,3 +4,8 @@ Cost cascade: Tier 1 structured data -> Tier 2 CMS adapters -> Tier 3 DOM
 heuristics -> Tier 4 LLM. A tier only runs on what previous tiers did not
 cover. Reads exclusively from the Raw Store, never from live sites.
 """
+
+from attrpipe.extraction.base import Extractor
+from attrpipe.extraction.tier1_structured import StructuredDataExtractor
+
+__all__ = ["Extractor", "StructuredDataExtractor"]
