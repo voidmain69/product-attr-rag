@@ -1,0 +1,15 @@
+{
+  "product": {
+    "brand": "MSI",
+    "name": "MAG B650 TOMAHAWK WIFI",
+    "source_url": "https://www.msi.com/Motherboard/MAG-B650-TOMAHAWK-WIFI"
+  },
+  "expected": {
+    "socket": "AM5",
+    "chipset": "B650",
+    "form_factor": "ATX",
+    "memory_type": "DDR5",
+    "memory_slots": 4,
+    "max_memory": 256
+  }
+}

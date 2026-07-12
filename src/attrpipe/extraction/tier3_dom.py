@@ -21,7 +21,33 @@ _CELL_TAGS = frozenset({"td", "th"})
 _WS_RE = re.compile(r"\s+")
 # A value that is exactly "<number> <unit>" is split so normalization sees the unit.
 _QUANTITY_RE = re.compile(r"^([-+]?\d+(?:[.,]\d+)?)\s*([A-Za-zµ°%/]+)?$")
-_KNOWN_UNITS = frozenset({"g", "kg", "mg", "oz", "lb", "mm", "cm", "m", "h", "hr", "min", "s"})
+_KNOWN_UNITS = frozenset(
+    {
+        "g",
+        "kg",
+        "mg",
+        "oz",
+        "lb",
+        "mm",
+        "cm",
+        "m",
+        "in",
+        "h",
+        "hr",
+        "min",
+        "s",
+        "ms",
+        "hz",
+        "khz",
+        "mhz",
+        "ghz",
+        "w",
+        "kw",
+        "mb",
+        "gb",
+        "tb",
+    }
+)
 
 
 def _clean(text: str) -> str:

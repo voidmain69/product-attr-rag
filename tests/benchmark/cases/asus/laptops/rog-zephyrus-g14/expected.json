@@ -1,0 +1,14 @@
+{
+  "product": {
+    "brand": "ASUS",
+    "name": "ROG Zephyrus G14 (2024)",
+    "source_url": "https://www.asus.com/laptops/for-gaming/rog-zephyrus/rog-zephyrus-g14-2024/"
+  },
+  "expected": {
+    "cpu_model": "AMD Ryzen 9 8945HS",
+    "gpu_model": "NVIDIA GeForce RTX 4070",
+    "ram": 32,
+    "storage": 1024,
+    "screen_size": 14
+  }
+}

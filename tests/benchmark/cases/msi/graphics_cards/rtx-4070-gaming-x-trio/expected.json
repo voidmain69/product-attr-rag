@@ -1,0 +1,15 @@
+{
+  "product": {
+    "brand": "MSI",
+    "name": "GeForce RTX 4070 GAMING X TRIO 12G",
+    "source_url": "https://www.msi.com/Graphics-Card/GeForce-RTX-4070-GAMING-X-TRIO-12G"
+  },
+  "expected": {
+    "gpu_memory": 12,
+    "memory_type": "GDDR6X",
+    "gpu_boost_clock": 2640,
+    "gpu_cores": 5888,
+    "interface": "PCIe 4.0",
+    "tdp": 200
+  }
+}
