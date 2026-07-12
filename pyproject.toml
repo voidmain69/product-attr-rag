@@ -42,6 +42,9 @@ api = [
     "uvicorn[standard]>=0.30",
     "prometheus-client>=0.20",
 ]
+llm = [
+    "anthropic>=0.69",
+]
 telemetry = [
     "opentelemetry-sdk>=1.25",
     "opentelemetry-exporter-otlp>=1.25",
@@ -76,6 +79,7 @@ ignore = [
     "RUF001",    # ambiguous unicode - raw attributes ARE multilingual (uk/ru/en)
     "RUF002",
     "RUF003",
+    "PLC0415",   # lazy imports are deliberate for optional extras (anthropic, ...)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -93,6 +97,10 @@ show_error_codes = true
 [[tool.mypy.overrides]]
 module = ["boto3", "boto3.*", "botocore", "botocore.*"]
 ignore_missing_imports = true  # boto3 ships no type stubs
+
+[[tool.mypy.overrides]]
+module = ["anthropic", "anthropic.*"]
+ignore_missing_imports = true  # optional llm extra, not installed in CI
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
