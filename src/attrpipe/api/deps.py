@@ -10,6 +10,7 @@ from typing import Annotated, Any
 import psycopg
 from fastapi import Depends
 
+from attrpipe.rag import AnswerService
 from attrpipe.storage import FactRepository, ProductRepository, connect
 
 
@@ -32,5 +33,10 @@ def get_product_repository(conn: ConnectionDep) -> ProductRepository:
     return ProductRepository(conn)
 
 
+def get_answer_service(conn: ConnectionDep) -> AnswerService:
+    return AnswerService(ProductRepository(conn), FactRepository(conn))
+
+
 FactRepositoryDep = Annotated[FactRepository, Depends(get_fact_repository)]
 ProductRepositoryDep = Annotated[ProductRepository, Depends(get_product_repository)]
+AnswerServiceDep = Annotated[AnswerService, Depends(get_answer_service)]
