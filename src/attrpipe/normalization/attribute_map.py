@@ -23,13 +23,20 @@ def normalize_label(label: str) -> str:
 class DictionaryAttributeMapper:
     """Deterministic raw_attribute -> attribute_key mapper over the ontology."""
 
-    def __init__(self, ontology: dict[str, CanonicalAttribute] | None = None) -> None:
+    def __init__(
+        self,
+        ontology: dict[str, CanonicalAttribute] | None = None,
+        learned: dict[str, str] | None = None,
+    ) -> None:
         source = ontology if ontology is not None else ONTOLOGY
         self._index: dict[str, str] = {}
         for attr in source.values():
             labels = (attr.attribute_key, *attr.synonyms, *attr.display_name.values())
             for label in labels:
                 self._index[normalize_label(label)] = attr.attribute_key
+        # Human-confirmed mappings (docs/03 §2.4) are authoritative -> applied last.
+        for raw_attribute, attribute_key in (learned or {}).items():
+            self._index[normalize_label(raw_attribute)] = attribute_key
 
     def map(self, raw_attribute: str) -> str | None:
         """Return the canonical attribute_key, or ``None`` if unknown (-> HITL)."""

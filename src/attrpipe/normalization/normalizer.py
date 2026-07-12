@@ -12,6 +12,7 @@ never a guessed value (CLAUDE.md §2.6).
 """
 
 from datetime import datetime
+from typing import Literal
 
 from attrpipe.core.logging import get_logger
 from attrpipe.domain import CandidateFact, CanonicalFact
@@ -21,6 +22,9 @@ from attrpipe.normalization.ontology import ONTOLOGY_VERSION, get_attribute
 from attrpipe.normalization.units import normalize_quantity
 
 logger = get_logger(__name__)
+
+# Why a candidate did not become a canonical fact — routes it to the right HITL queue.
+NormalizationReason = Literal["ok", "unmapped", "unparseable", "out_of_constraints"]
 
 
 class Normalizer:
@@ -33,14 +37,23 @@ class Normalizer:
         product_id: str,
         valid_from: datetime,
     ) -> CanonicalFact | None:
+        return self.normalize_result(candidate, product_id, valid_from)[0]
+
+    def normalize_result(
+        self,
+        candidate: CandidateFact,
+        product_id: str,
+        valid_from: datetime,
+    ) -> tuple[CanonicalFact | None, NormalizationReason]:
+        """Like ``normalize`` but also returns why it failed, for HITL routing."""
         attribute_key = self._mapper.map(candidate.raw_attribute)
         if attribute_key is None:
             logger.info("attribute_unmapped", raw_attribute=candidate.raw_attribute)
-            return None
+            return None, "unmapped"
 
         attribute = get_attribute(attribute_key)
         if attribute is None:  # pragma: no cover - mapper only yields known keys
-            return None
+            return None, "unmapped"
 
         original_value = _original_value(candidate)
         canonical_value: str | float | bool | None
@@ -56,21 +69,21 @@ class Normalizer:
                     attribute_key=attribute_key,
                     raw_value=candidate.raw_value,
                 )
-                return None
+                return None, "unparseable"
             if not _within_constraints(number, attribute.value_constraints):
                 logger.warning(
                     "value_out_of_constraints",
                     attribute_key=attribute_key,
                     canonical_value=number,
                 )
-                return None
+                return None, "out_of_constraints"
             canonical_value = number
             canonical_unit = attribute.canonical_unit
         else:
             canonical_value = candidate.raw_value.strip()
             canonical_unit = None
 
-        return CanonicalFact(
+        fact = CanonicalFact(
             product_id=product_id,
             attribute_key=attribute_key,
             ontology_version=ONTOLOGY_VERSION,
@@ -82,6 +95,7 @@ class Normalizer:
             provenance=candidate.provenance,
             valid_from=valid_from,
         )
+        return fact, "ok"
 
 
 def _original_value(candidate: CandidateFact) -> str:

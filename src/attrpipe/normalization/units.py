@@ -25,6 +25,46 @@ _UNIT_FACTORS: dict[str, tuple[str, float]] = {
     "s": ("time", 1.0 / 3600.0),
 }
 
+# Spelled-out / plural unit spellings (common in LLM prose) mapped to canonical symbols.
+_UNIT_ALIASES: dict[str, str] = {
+    "gram": "g",
+    "grams": "g",
+    "gramme": "g",
+    "grammes": "g",
+    "kilogram": "kg",
+    "kilograms": "kg",
+    "kilogramme": "kg",
+    "kilogrammes": "kg",
+    "milligram": "mg",
+    "milligrams": "mg",
+    "ounce": "oz",
+    "ounces": "oz",
+    "pound": "lb",
+    "pounds": "lb",
+    "millimeter": "mm",
+    "millimeters": "mm",
+    "millimetre": "mm",
+    "millimetres": "mm",
+    "centimeter": "cm",
+    "centimeters": "cm",
+    "centimetre": "cm",
+    "centimetres": "cm",
+    "meter": "m",
+    "meters": "m",
+    "metre": "m",
+    "metres": "m",
+    "hour": "h",
+    "hours": "h",
+    "hrs": "h",
+    "minute": "min",
+    "minutes": "min",
+    "mins": "min",
+    "second": "s",
+    "seconds": "s",
+    "secs": "s",
+    "sec": "s",
+}
+
 _NUMBER_RE = re.compile(r"[-+]?\d*[.,]?\d+")
 
 
@@ -43,8 +83,10 @@ def parse_number(raw: str) -> float | None:
 def normalize_unit(unit: str | None) -> str | None:
     if unit is None:
         return None
-    cleaned = unit.strip().lower()
-    return cleaned or None
+    cleaned = unit.strip().lower().rstrip(".")
+    if not cleaned:
+        return None
+    return _UNIT_ALIASES.get(cleaned, cleaned)
 
 
 def convert(value: float, from_unit: str | None, canonical_unit: str) -> float | None:

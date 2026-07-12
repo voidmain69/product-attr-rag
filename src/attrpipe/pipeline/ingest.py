@@ -10,7 +10,7 @@ orchestration is unit-testable without a network or object store.
 """
 
 from datetime import UTC, datetime
-from typing import Protocol
+from typing import Any, Protocol
 
 from pydantic import BaseModel
 
@@ -22,6 +22,13 @@ from attrpipe.storage import FactRepository, ProductRef, ProductRepository
 
 logger = get_logger(__name__)
 
+# A failed normalization is routed to the queue that a human can act on (docs/06 §4).
+_REASON_QUEUE: dict[str, str] = {
+    "unmapped": "attribute_mapping",
+    "unparseable": "value_anomaly",
+    "out_of_constraints": "value_anomaly",
+}
+
 
 class Fetcher(Protocol):
     def fetch(self, url: str) -> RawArtifact: ...
@@ -31,6 +38,17 @@ class RawArtifactSink(Protocol):
     def put(self, artifact: RawArtifact) -> str: ...
 
 
+class HitlSink(Protocol):
+    def enqueue(
+        self,
+        queue: Any,
+        payload: dict[str, Any],
+        *,
+        priority: int = ...,
+        dedup: str | None = ...,
+    ) -> str | None: ...
+
+
 class IngestResult(BaseModel):
     url: str
     raw_artifact_id: str
@@ -38,6 +56,7 @@ class IngestResult(BaseModel):
     candidates: int
     facts_written: int
     facts_unmapped: int
+    hitl_enqueued: int
 
 
 class IngestPipeline:
@@ -49,6 +68,7 @@ class IngestPipeline:
         normalizer: Normalizer,
         products: ProductRepository,
         facts: FactRepository,
+        hitl: HitlSink | None = None,
     ) -> None:
         self._fetcher = fetcher
         self._raw_store = raw_store
@@ -56,6 +76,7 @@ class IngestPipeline:
         self._normalizer = normalizer
         self._products = products
         self._facts = facts
+        self._hitl = hitl
 
     def ingest(
         self,
@@ -74,11 +95,14 @@ class IngestPipeline:
         product_id = self._products.resolve_or_create(ref)
 
         written = 0
+        enqueued = 0
         for candidate in candidates:
-            fact = self._normalizer.normalize(candidate, product_id, stamp)
+            fact, reason = self._normalizer.normalize_result(candidate, product_id, stamp)
             if fact is not None:
                 self._facts.upsert(fact)
                 written += 1
+            elif self._route_to_hitl(candidate, reason, artifact):
+                enqueued += 1
 
         logger.info(
             "ingest_done",
@@ -86,6 +110,7 @@ class IngestPipeline:
             product_id=product_id,
             candidates=len(candidates),
             facts_written=written,
+            hitl_enqueued=enqueued,
         )
         return IngestResult(
             url=url,
@@ -94,7 +119,26 @@ class IngestPipeline:
             candidates=len(candidates),
             facts_written=written,
             facts_unmapped=len(candidates) - written,
+            hitl_enqueued=enqueued,
         )
+
+    def _route_to_hitl(self, candidate: CandidateFact, reason: str, artifact: RawArtifact) -> bool:
+        queue = _REASON_QUEUE.get(reason)
+        if self._hitl is None or queue is None:
+            return False
+        payload = {
+            "raw_attribute": candidate.raw_attribute,
+            "raw_value": candidate.raw_value,
+            "raw_unit": candidate.raw_unit,
+            "source_url": artifact.source_url,
+            "reason": reason,
+        }
+        dedup = (
+            candidate.raw_attribute
+            if reason == "unmapped"
+            else f"{candidate.raw_attribute}:{candidate.raw_value}"
+        )
+        return self._hitl.enqueue(queue, payload, dedup=dedup) is not None
 
 
 def _enrich_ref(
