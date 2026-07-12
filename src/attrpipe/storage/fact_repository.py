@@ -7,14 +7,32 @@ identical fact is a no-op, which keeps reprocessing the same artifact idempotent
 (CLAUDE.md §2.3). Current state is ``effective = true AND superseded_by IS NULL``.
 """
 
-from typing import Any
+from typing import Any, Literal
 
 import psycopg
 from psycopg.types.json import Jsonb
+from pydantic import BaseModel
 
 from attrpipe.domain import CanonicalFact, Provenance
 from attrpipe.domain.facts import DataType
 from attrpipe.storage.db import generate_id
+
+FilterOp = Literal["eq", "ne", "lt", "lte", "gt", "gte"]
+_SQL_OPS: dict[str, str] = {
+    "eq": "=",
+    "ne": "<>",
+    "lt": "<",
+    "lte": "<=",
+    "gt": ">",
+    "gte": ">=",
+}
+_NUMERIC_OPS = frozenset({"lt", "lte", "gt", "gte"})
+
+
+class Constraint(BaseModel):
+    attribute_key: str
+    op: FilterOp = "eq"
+    value: str | float | bool
 
 
 class FactRepository:
@@ -80,6 +98,53 @@ class FactRepository:
             )
             row = cur.fetchone()
             return _row_to_fact(row) if row is not None else None
+
+    def filter_products(self, constraints: list[Constraint], limit: int = 100) -> list[str]:
+        """Return product_ids whose effective facts satisfy ALL constraints (docs/05 §6).
+
+        Numeric comparisons run on the canonical (normalized) value, so filters
+        like ``net_weight < 300`` are correct across source units.
+        """
+        if not constraints:
+            return []
+        clauses: list[str] = []
+        params: list[Any] = []
+        for constraint in constraints:
+            sql_op = _SQL_OPS[constraint.op]
+            if constraint.op in _NUMERIC_OPS:
+                condition = f"(f.canonical_value #>> '{{}}')::numeric {sql_op} %s::numeric"
+                value: Any = float(constraint.value)
+            else:
+                condition = f"(f.canonical_value #>> '{{}}') {sql_op} %s"
+                value = str(constraint.value)
+            clauses.append(
+                "EXISTS (SELECT 1 FROM facts f WHERE f.product_id = p.product_id"
+                " AND f.attribute_key = %s AND f.effective AND f.superseded_by IS NULL"
+                f" AND {condition})"
+            )
+            params.extend((constraint.attribute_key, value))
+        params.append(limit)
+        sql = (
+            "SELECT p.product_id FROM products p WHERE "
+            + " AND ".join(clauses)
+            + " ORDER BY p.product_id LIMIT %s"
+        )
+        with self._conn.cursor() as cur:
+            cur.execute(sql, params)
+            return [str(row["product_id"]) for row in cur.fetchall()]
+
+    def compare(self, product_ids: list[str], attribute_keys: list[str]) -> list[CanonicalFact]:
+        """Effective facts for the given products and attributes, for a comparison table."""
+        if not product_ids or not attribute_keys:
+            return []
+        with self._conn.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM facts WHERE product_id = ANY(%s) AND attribute_key = ANY(%s)"
+                " AND effective AND superseded_by IS NULL"
+                " ORDER BY product_id, attribute_key",
+                (product_ids, attribute_keys),
+            )
+            return [_row_to_fact(row) for row in cur.fetchall()]
 
 
 def _unchanged(current: dict[str, Any], fact: CanonicalFact) -> bool:

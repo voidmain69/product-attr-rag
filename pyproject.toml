@@ -90,6 +90,10 @@ packages = ["attrpipe"]
 warn_unreachable = true
 show_error_codes = true
 
+[[tool.mypy.overrides]]
+module = ["boto3", "boto3.*", "botocore", "botocore.*"]
+ignore_missing_imports = true  # boto3 ships no type stubs
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"

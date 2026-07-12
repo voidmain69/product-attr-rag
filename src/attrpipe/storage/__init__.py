@@ -7,11 +7,13 @@ category) so retrieval cannot mix up products.
 """
 
 from attrpipe.storage.db import connect, generate_id
-from attrpipe.storage.fact_repository import FactRepository
+from attrpipe.storage.fact_repository import Constraint, FactRepository, FilterOp
 from attrpipe.storage.product_repository import ProductRecord, ProductRef, ProductRepository
 
 __all__ = [
+    "Constraint",
     "FactRepository",
+    "FilterOp",
     "ProductRecord",
     "ProductRef",
     "ProductRepository",

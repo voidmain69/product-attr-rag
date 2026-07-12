@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from attrpipe.domain import CanonicalFact
 from attrpipe.domain.facts import DataType
 from attrpipe.normalization.ontology import CanonicalAttribute
-from attrpipe.storage import ProductRecord
+from attrpipe.storage import FilterOp, ProductRecord
 
 
 class FactOut(BaseModel):
@@ -54,6 +54,52 @@ class ProductOut(BaseModel):
     @classmethod
     def from_record(cls, record: ProductRecord) -> "ProductOut":
         return cls(**record.model_dump())
+
+
+class AnswerIn(BaseModel):
+    question: str
+    product_id: str | None = None
+    gtin: str | None = None
+    mpn: str | None = None
+    brand: str | None = None
+    model: str | None = None
+
+
+class FilterConstraintIn(BaseModel):
+    attribute_key: str
+    op: FilterOp = "eq"
+    value: str | float | bool
+
+
+class FilterIn(BaseModel):
+    constraints: list[FilterConstraintIn]
+    limit: int = 100
+
+
+class FilterOut(BaseModel):
+    product_ids: list[str]
+    count: int
+
+
+class CompareIn(BaseModel):
+    product_ids: list[str]
+    attribute_keys: list[str]
+
+
+class CompareCell(BaseModel):
+    canonical_value: str | float | bool | None
+    canonical_unit: str | None
+    original_value: str
+
+
+class CompareRow(BaseModel):
+    product_id: str
+    attributes: dict[str, CompareCell]
+
+
+class CompareOut(BaseModel):
+    attribute_keys: list[str]
+    rows: list[CompareRow]
 
 
 class AttributeOut(BaseModel):

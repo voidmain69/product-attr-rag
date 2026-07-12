@@ -83,23 +83,49 @@ class ProductRepository:
             row = cur.fetchone()
             return ProductRecord.model_validate(row) if row is not None else None
 
+    def resolve(
+        self,
+        *,
+        gtin: str | None = None,
+        mpn: str | None = None,
+        brand: str | None = None,
+        model: str | None = None,
+    ) -> str | None:
+        """Read-only entity resolution by GTIN > MPN+brand > brand+model, or None."""
+        with self._conn.cursor() as cur:
+            return self._resolve(cur, gtin=gtin, mpn=mpn, brand=brand, model=model)
+
     def _find(self, cur: psycopg.Cursor[dict[str, Any]], ref: ProductRef) -> str | None:
-        if ref.gtin:
-            cur.execute("SELECT product_id FROM products WHERE gtin = %s", (ref.gtin,))
+        return self._resolve(cur, gtin=ref.gtin, mpn=ref.mpn, brand=ref.brand, model=ref.model)
+
+    def _resolve(
+        self,
+        cur: psycopg.Cursor[dict[str, Any]],
+        *,
+        gtin: str | None,
+        mpn: str | None,
+        brand: str | None,
+        model: str | None,
+    ) -> str | None:
+        if gtin:
+            cur.execute("SELECT product_id FROM products WHERE gtin = %s", (gtin,))
             row = cur.fetchone()
             if row is not None:
                 return str(row["product_id"])
-        if ref.mpn:
+        if mpn and brand:
             cur.execute(
                 "SELECT product_id FROM products WHERE mpn = %s AND brand = %s",
-                (ref.mpn, ref.brand),
+                (mpn, brand),
             )
             row = cur.fetchone()
             if row is not None:
                 return str(row["product_id"])
-        cur.execute(
-            "SELECT product_id FROM products WHERE brand = %s AND lower(model) = lower(%s)",
-            (ref.brand, ref.model),
-        )
-        row = cur.fetchone()
-        return str(row["product_id"]) if row is not None else None
+        if brand and model:
+            cur.execute(
+                "SELECT product_id FROM products WHERE brand = %s AND lower(model) = lower(%s)",
+                (brand, model),
+            )
+            row = cur.fetchone()
+            if row is not None:
+                return str(row["product_id"])
+        return None

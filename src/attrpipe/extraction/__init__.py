@@ -7,5 +7,6 @@ cover. Reads exclusively from the Raw Store, never from live sites.
 
 from attrpipe.extraction.base import Extractor
 from attrpipe.extraction.tier1_structured import StructuredDataExtractor
+from attrpipe.extraction.tier3_dom import DomHeuristicsExtractor
 
-__all__ = ["Extractor", "StructuredDataExtractor"]
+__all__ = ["DomHeuristicsExtractor", "Extractor", "StructuredDataExtractor"]
