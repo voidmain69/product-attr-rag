@@ -26,6 +26,11 @@ def hitl() -> Iterator[tuple[HitlRepository, list[str]]]:
         conn = psycopg.connect(_dsn(), row_factory=dict_row, connect_timeout=3)
     except psycopg.OperationalError as exc:  # pragma: no cover
         pytest.skip(f"Postgres not available: {exc}")
+    # Clear this file's dedup keys up front so a crashed prior run can't wedge
+    # enqueue via a stale open item (dedup returns None otherwise).
+    dedups = ("Вес нетто", "torque", "weight:9e9", "disp-1")
+    with conn.transaction(), conn.cursor() as cur:
+        cur.execute("DELETE FROM hitl_queue WHERE payload->>'_dedup' = ANY(%s)", (list(dedups),))
     created: list[str] = []
     yield HitlRepository(conn), created
     with conn.transaction(), conn.cursor() as cur:
