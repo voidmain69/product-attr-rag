@@ -7,6 +7,7 @@ by silent overwrite.
 """
 
 from attrpipe.normalization.attribute_map import DictionaryAttributeMapper
+from attrpipe.normalization.conflict import ConflictResolver, Decision
 from attrpipe.normalization.normalizer import Normalizer
 from attrpipe.normalization.ontology import ONTOLOGY, ONTOLOGY_VERSION, CanonicalAttribute
 
@@ -14,6 +15,8 @@ __all__ = [
     "ONTOLOGY",
     "ONTOLOGY_VERSION",
     "CanonicalAttribute",
+    "ConflictResolver",
+    "Decision",
     "DictionaryAttributeMapper",
     "Normalizer",
 ]
