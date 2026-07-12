@@ -1,0 +1,26 @@
+{
+  "product": {
+    "id": 123456789,
+    "title": "Acme Model X",
+    "handle": "acme-model-x",
+    "vendor": "Acme",
+    "product_type": "Headphones",
+    "tags": ["audio", "wireless"],
+    "variants": [
+      {
+        "id": 987654321,
+        "title": "Default",
+        "sku": "AC-MX-001",
+        "barcode": "4006381333931",
+        "price": "199.00",
+        "grams": 2300,
+        "weight": 2.3,
+        "weight_unit": "kg"
+      }
+    ],
+    "options": [
+      {"name": "Color", "values": ["Midnight Black"]},
+      {"name": "Size", "values": ["S", "M", "L"]}
+    ]
+  }
+}
