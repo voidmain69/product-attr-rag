@@ -37,6 +37,9 @@ jobs:
       - name: Unit tests + coverage
         run: pytest -m "not integration and not golden" --cov --cov-report=xml
 
+      - name: Golden-set regression gate
+        run: pytest -m golden  # deterministic (no network/DB); blocks accuracy regressions
+
   secrets-scan:
     name: secrets-scan
     runs-on: ubuntu-latest

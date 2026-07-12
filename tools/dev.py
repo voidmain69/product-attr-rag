@@ -9,6 +9,7 @@ Usage:
     python tools/dev.py typecheck    # mypy only
     python tools/dev.py test         # pytest unit tests
     python tools/dev.py test-all     # pytest including integration markers
+    python tools/dev.py golden       # pytest golden-set regression evals
     python tools/dev.py cov          # pytest with coverage report
     python tools/dev.py serve        # run the API (uvicorn) on :8010 with reload
     python tools/dev.py up           # docker compose up: core + monitoring profiles
@@ -81,6 +82,10 @@ def cmd_test() -> None:
 
 def cmd_test_all() -> None:
     run(venv_python(), "-m", "pytest")
+
+
+def cmd_golden() -> None:
+    run(venv_python(), "-m", "pytest", "-m", "golden")
 
 
 def cmd_cov() -> None:
@@ -186,6 +191,7 @@ COMMANDS = {
     "typecheck": cmd_typecheck,
     "test": cmd_test,
     "test-all": cmd_test_all,
+    "golden": cmd_golden,
     "cov": cmd_cov,
     "serve": cmd_serve,
     "up": cmd_up,
