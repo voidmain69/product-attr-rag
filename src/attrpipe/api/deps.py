@@ -11,7 +11,13 @@ import psycopg
 from fastapi import Depends
 
 from attrpipe.rag import AnswerService
-from attrpipe.storage import FactRepository, HitlRepository, ProductRepository, connect
+from attrpipe.storage import (
+    FactRepository,
+    HitlRepository,
+    MappingDictionaryRepository,
+    ProductRepository,
+    connect,
+)
 
 
 def get_connection() -> Iterator[psycopg.Connection[dict[str, Any]]]:
@@ -41,7 +47,12 @@ def get_hitl_repository(conn: ConnectionDep) -> HitlRepository:
     return HitlRepository(conn)
 
 
+def get_mapping_repository(conn: ConnectionDep) -> MappingDictionaryRepository:
+    return MappingDictionaryRepository(conn)
+
+
 FactRepositoryDep = Annotated[FactRepository, Depends(get_fact_repository)]
 ProductRepositoryDep = Annotated[ProductRepository, Depends(get_product_repository)]
 AnswerServiceDep = Annotated[AnswerService, Depends(get_answer_service)]
 HitlRepositoryDep = Annotated[HitlRepository, Depends(get_hitl_repository)]
+MappingRepositoryDep = Annotated[MappingDictionaryRepository, Depends(get_mapping_repository)]
