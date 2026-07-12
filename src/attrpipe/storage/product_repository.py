@@ -26,6 +26,19 @@ class ProductRef(BaseModel):
     source_url: str | None = None
 
 
+class ProductRecord(BaseModel):
+    """A persisted product entity (read model)."""
+
+    product_id: str
+    brand: str
+    model: str
+    category_path: list[str]
+    gtin: str | None = None
+    mpn: str | None = None
+    canonical_title: str | None = None
+    source_urls: list[str]
+
+
 class ProductRepository:
     def __init__(self, conn: psycopg.Connection[dict[str, Any]]) -> None:
         self._conn = conn
@@ -59,6 +72,16 @@ class ProductRepository:
                 ),
             )
             return new_id
+
+    def get(self, product_id: str) -> ProductRecord | None:
+        with self._conn.cursor() as cur:
+            cur.execute(
+                "SELECT product_id, brand, model, category_path, gtin, mpn,"
+                " canonical_title, source_urls FROM products WHERE product_id = %s",
+                (product_id,),
+            )
+            row = cur.fetchone()
+            return ProductRecord.model_validate(row) if row is not None else None
 
     def _find(self, cur: psycopg.Cursor[dict[str, Any]], ref: ProductRef) -> str | None:
         if ref.gtin:
