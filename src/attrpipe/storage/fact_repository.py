@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from attrpipe.domain import CanonicalFact, Provenance
 from attrpipe.domain.facts import DataType
+from attrpipe.normalization.conflict import ConflictResolver
 from attrpipe.storage.db import generate_id
 
 FilterOp = Literal["eq", "ne", "lt", "lte", "gt", "gte"]
@@ -36,49 +37,80 @@ class Constraint(BaseModel):
 
 
 class FactRepository:
-    def __init__(self, conn: psycopg.Connection[dict[str, Any]]) -> None:
+    def __init__(
+        self,
+        conn: psycopg.Connection[dict[str, Any]],
+        resolver: ConflictResolver | None = None,
+    ) -> None:
         self._conn = conn
+        self._resolver = resolver if resolver is not None else ConflictResolver()
 
     def upsert(self, fact: CanonicalFact) -> str:
-        """Insert ``fact`` as a new version, superseding the current one; return fact_id."""
+        """Record ``fact``, resolving it against the current effective one (docs/03 §5).
+
+        Same-source revalidation supersedes the old value; a different source is
+        conflict-resolved by authority/freshness/confidence, keeping both rows
+        and flagging ``disputed`` when equal-authority sources disagree.
+        """
         with self._conn.transaction(), self._conn.cursor() as cur:
             cur.execute(
-                "SELECT fact_id, canonical_value, canonical_unit, provenance FROM facts"
-                " WHERE product_id = %s AND attribute_key = %s"
+                "SELECT * FROM facts WHERE product_id = %s AND attribute_key = %s"
                 " AND effective AND superseded_by IS NULL FOR UPDATE",
                 (fact.product_id, fact.attribute_key),
             )
             current = cur.fetchone()
-            if current is not None and _unchanged(current, fact):
+            if current is None:
+                return self._insert(cur, fact, effective=True, disputed=fact.disputed)
+            if _unchanged(current, fact):
                 return str(current["fact_id"])
 
-            new_id = generate_id("fct")
-            cur.execute(
-                "INSERT INTO facts (fact_id, product_id, attribute_key, ontology_version,"
-                " data_type, canonical_value, canonical_unit, original_value, effective,"
-                " disputed, confidence, provenance, valid_from)"
-                " VALUES (%s,%s,%s,%s,%s,%s,%s,%s,TRUE,%s,%s,%s,%s)",
-                (
-                    new_id,
-                    fact.product_id,
-                    fact.attribute_key,
-                    fact.ontology_version,
-                    fact.data_type.value,
-                    Jsonb(fact.canonical_value),
-                    fact.canonical_unit,
-                    fact.original_value,
-                    fact.disputed,
-                    fact.confidence,
-                    Jsonb(fact.provenance.model_dump(mode="json")),
-                    fact.valid_from,
-                ),
+            decision = self._resolver.decide(_row_to_fact(current), fact)
+            new_id = self._insert(
+                cur, fact, effective=decision.effective_is_candidate, disputed=decision.disputed
             )
-            if current is not None:
+            if decision.supersede:
                 cur.execute(
                     "UPDATE facts SET effective = FALSE, superseded_by = %s WHERE fact_id = %s",
                     (new_id, current["fact_id"]),
                 )
+            else:
+                cur.execute(
+                    "UPDATE facts SET effective = %s, disputed = %s WHERE fact_id = %s",
+                    (not decision.effective_is_candidate, decision.disputed, current["fact_id"]),
+                )
             return new_id
+
+    def _insert(
+        self,
+        cur: psycopg.Cursor[dict[str, Any]],
+        fact: CanonicalFact,
+        *,
+        effective: bool,
+        disputed: bool,
+    ) -> str:
+        new_id = generate_id("fct")
+        cur.execute(
+            "INSERT INTO facts (fact_id, product_id, attribute_key, ontology_version,"
+            " data_type, canonical_value, canonical_unit, original_value, effective,"
+            " disputed, confidence, provenance, valid_from)"
+            " VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (
+                new_id,
+                fact.product_id,
+                fact.attribute_key,
+                fact.ontology_version,
+                fact.data_type.value,
+                Jsonb(fact.canonical_value),
+                fact.canonical_unit,
+                fact.original_value,
+                effective,
+                disputed,
+                fact.confidence,
+                Jsonb(fact.provenance.model_dump(mode="json")),
+                fact.valid_from,
+            ),
+        )
+        return new_id
 
     def get_effective_facts(self, product_id: str) -> list[CanonicalFact]:
         with self._conn.cursor() as cur:
