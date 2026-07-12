@@ -29,6 +29,15 @@ def repos() -> Iterator[tuple[ProductRepository, FactRepository, list[str]]]:
         conn = psycopg.connect(_dsn(), row_factory=dict_row, connect_timeout=3)
     except psycopg.OperationalError as exc:  # pragma: no cover
         pytest.skip(f"Postgres not available: {exc}")
+    # Clear this file's fixed GTINs up front so a prior run's leftovers can't be
+    # re-resolved and inflate fact counts (resolve_or_create matches by GTIN).
+    with conn.transaction(), conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM facts WHERE product_id IN"
+            " (SELECT product_id FROM products WHERE gtin = ANY(%s))",
+            (["C-AUTH", "C-DISP", "C-REVAL"],),
+        )
+        cur.execute("DELETE FROM products WHERE gtin = ANY(%s)", (["C-AUTH", "C-DISP", "C-REVAL"],))
     created: list[str] = []
     yield ProductRepository(conn), FactRepository(conn), created
     with conn.transaction(), conn.cursor() as cur:
