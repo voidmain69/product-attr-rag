@@ -9,10 +9,14 @@ from attrpipe.extraction.base import Extractor
 from attrpipe.extraction.tier1_structured import StructuredDataExtractor
 from attrpipe.extraction.tier2_shopify import ShopifyAdapter
 from attrpipe.extraction.tier3_dom import DomHeuristicsExtractor
+from attrpipe.extraction.tier4_llm import ExtractedFact, LlmExtractor, StructuredExtractionModel
 
 __all__ = [
     "DomHeuristicsExtractor",
+    "ExtractedFact",
     "Extractor",
+    "LlmExtractor",
     "ShopifyAdapter",
     "StructuredDataExtractor",
+    "StructuredExtractionModel",
 ]
