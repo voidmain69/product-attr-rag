@@ -5,3 +5,15 @@ derived and rebuildable; the fact store is the single source of truth. Chunks
 are self-contained: every chunk carries the product header (brand, model,
 category) so retrieval cannot mix up products.
 """
+
+from attrpipe.storage.db import connect, generate_id
+from attrpipe.storage.fact_repository import FactRepository
+from attrpipe.storage.product_repository import ProductRef, ProductRepository
+
+__all__ = [
+    "FactRepository",
+    "ProductRef",
+    "ProductRepository",
+    "connect",
+    "generate_id",
+]
