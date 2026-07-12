@@ -10,6 +10,7 @@ Usage:
     python tools/dev.py test         # pytest unit tests
     python tools/dev.py test-all     # pytest including integration markers
     python tools/dev.py cov          # pytest with coverage report
+    python tools/dev.py serve        # run the API (uvicorn) on :8010 with reload
     python tools/dev.py up           # docker compose up: core + monitoring profiles
     python tools/dev.py up-all       # + search profile (OpenSearch)
     python tools/dev.py down         # docker compose down
@@ -102,6 +103,20 @@ def cmd_check() -> None:
     print("all checks passed")
 
 
+def cmd_serve() -> None:
+    run(
+        venv_python(),
+        "-m",
+        "uvicorn",
+        "attrpipe.api.app:app",
+        "--reload",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8010",
+    )
+
+
 def cmd_up() -> None:
     run("docker", "compose", "--profile", "core", "--profile", "monitoring", "up", "-d")
     cmd_status()
@@ -172,6 +187,7 @@ COMMANDS = {
     "test": cmd_test,
     "test-all": cmd_test_all,
     "cov": cmd_cov,
+    "serve": cmd_serve,
     "up": cmd_up,
     "up-all": cmd_up_all,
     "down": cmd_down,
