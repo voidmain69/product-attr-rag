@@ -87,14 +87,17 @@ class TestFilter:
         self, repos: tuple[ProductRepository, FactRepository, list[str]]
     ) -> None:
         products, facts, created = repos
-        light, _heavy = _seed(products, facts, created)
+        light, heavy = _seed(products, facts, created)
         result = facts.filter_products(
             [
                 Constraint(attribute_key="ip_rating", op="eq", value="IP67"),
                 Constraint(attribute_key="net_weight", op="lt", value=300),
             ]
         )
-        assert result == [light]
+        # membership, not exact equality — the filter scans the whole store, which
+        # may hold unrelated products from other work.
+        assert light in result
+        assert heavy not in result
 
     def test_no_match(self, repos: tuple[ProductRepository, FactRepository, list[str]]) -> None:
         products, facts, created = repos

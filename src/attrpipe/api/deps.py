@@ -12,7 +12,9 @@ from fastapi import Depends
 
 from attrpipe.rag import AnswerService
 from attrpipe.storage import (
+    ChunkRepository,
     FactRepository,
+    HashingEmbedder,
     HitlRepository,
     MappingDictionaryRepository,
     ProductRepository,
@@ -40,7 +42,8 @@ def get_product_repository(conn: ConnectionDep) -> ProductRepository:
 
 
 def get_answer_service(conn: ConnectionDep) -> AnswerService:
-    return AnswerService(ProductRepository(conn), FactRepository(conn))
+    retriever = ChunkRepository(conn, HashingEmbedder())
+    return AnswerService(ProductRepository(conn), FactRepository(conn), retriever=retriever)
 
 
 def get_hitl_repository(conn: ConnectionDep) -> HitlRepository:

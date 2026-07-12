@@ -115,3 +115,61 @@ class TestAnswerService:
         assert result.route == Route.REFUSED
         assert result.found is False
         assert "No data" in result.answer
+
+
+from attrpipe.storage import ChunkHit  # noqa: E402
+
+
+class FakeRetriever:
+    def __init__(self, hits: list[ChunkHit]) -> None:
+        self._hits = hits
+        self.queries: list[tuple[str, str | None]] = []
+
+    def search(
+        self, query: str, *, brand: str | None = None, category: str | None = None, limit: int = 5
+    ) -> list[ChunkHit]:
+        self.queries.append((query, brand))
+        return self._hits
+
+
+CHUNK = ChunkHit(
+    chunk_id="chk_1",
+    product_id="prd_1",
+    body=(
+        "[Brand: Acme] [Model: Model X] ip rating: IP67. "
+        "Source: https://example-vendor.com/x, as of 2026-07-10."
+    ),
+    brand="Acme",
+    attribute_keys=["ip_rating"],
+    source_url="https://example-vendor.com/x",
+    fetched_at=datetime(2026, 7, 10, 12, 0, tzinfo=UTC),
+    distance=0.3,
+)
+
+
+class TestHybridFallback:
+    def test_fuzzy_question_falls_back_to_hybrid(self) -> None:
+        retriever = FakeRetriever([CHUNK])
+        service = AnswerService(FakeResolver(), FakeFacts(), retriever=retriever)
+        # "is it waterproof" maps to no attribute -> route B
+        result = service.answer("is it waterproof for the rain?", brand="Acme", model="Model X")
+        assert result.route == Route.HYBRID
+        assert result.found is True
+        assert "IP67" in result.answer
+        assert result.citation is not None
+        assert result.citation.source_url == "https://example-vendor.com/x"
+        assert retriever.queries[0][1] == "Acme"  # brand filter forwarded
+
+    def test_hybrid_only_when_exact_fails(self) -> None:
+        retriever = FakeRetriever([CHUNK])
+        service = AnswerService(FakeResolver(), FakeFacts(), retriever=retriever)
+        # weight IS an exact fact -> route A wins, retriever untouched
+        result = service.answer("what is the weight?", brand="Acme", model="Model X")
+        assert result.route == Route.EXACT_LOOKUP
+        assert retriever.queries == []
+
+    def test_no_hits_is_honest_unknown(self) -> None:
+        service = AnswerService(FakeResolver(), FakeFacts(), retriever=FakeRetriever([]))
+        result = service.answer("is it waterproof?", brand="Acme", model="Model X")
+        assert result.route == Route.AMBIGUOUS
+        assert result.found is False
