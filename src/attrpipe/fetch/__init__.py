@@ -6,3 +6,20 @@ Rules baked into this layer:
 - every response lands in the Raw Store with full fetch provenance
   (url, fetched_at, http_status, content_hash, render_mode, detected_engine).
 """
+
+from attrpipe.fetch.politeness import PerDomainRateLimiter, RobotsPolicy
+from attrpipe.fetch.static_fetcher import (
+    DEFAULT_USER_AGENT,
+    RobotsDisallowedError,
+    StaticFetcher,
+)
+from attrpipe.fetch.url_canon import canonicalize_url
+
+__all__ = [
+    "DEFAULT_USER_AGENT",
+    "PerDomainRateLimiter",
+    "RobotsDisallowedError",
+    "RobotsPolicy",
+    "StaticFetcher",
+    "canonicalize_url",
+]
