@@ -9,7 +9,9 @@ decides what to do with an unparseable candidate (e.g. drop or route to HITL).
 import re
 
 # Conversion factor of each unit to its dimension's base unit.
-# Base units: mass=gram, length=millimetre, time=hour.
+# Base units: mass=gram, length=millimetre, time=hour, frequency=hertz,
+# power=watt, data=megabyte, and unitless counts (kept as their own dimensions
+# so a count never converts into a physical quantity).
 _UNIT_FACTORS: dict[str, tuple[str, float]] = {
     "g": ("mass", 1.0),
     "kg": ("mass", 1000.0),
@@ -19,10 +21,25 @@ _UNIT_FACTORS: dict[str, tuple[str, float]] = {
     "mm": ("length", 1.0),
     "cm": ("length", 10.0),
     "m": ("length", 1000.0),
+    "in": ("length", 25.4),
     "h": ("time", 1.0),
     "hr": ("time", 1.0),
     "min": ("time", 1.0 / 60.0),
     "s": ("time", 1.0 / 3600.0),
+    "ms": ("time", 1.0 / 3_600_000.0),
+    "hz": ("frequency", 1.0),
+    "khz": ("frequency", 1_000.0),
+    "mhz": ("frequency", 1_000_000.0),
+    "ghz": ("frequency", 1_000_000_000.0),
+    "w": ("power", 1.0),
+    "kw": ("power", 1000.0),
+    "mb": ("data", 1.0),
+    "gb": ("data", 1024.0),
+    "tb": ("data", 1_048_576.0),
+    # Unitless counts — each its own dimension so it never cross-converts.
+    "cores": ("count_cores", 1.0),
+    "threads": ("count_threads", 1.0),
+    "slots": ("count_slots", 1.0),
 }
 
 # Spelled-out / plural unit spellings (common in LLM prose) mapped to canonical symbols.
@@ -63,6 +80,30 @@ _UNIT_ALIASES: dict[str, str] = {
     "seconds": "s",
     "secs": "s",
     "sec": "s",
+    "millisecond": "ms",
+    "milliseconds": "ms",
+    "msec": "ms",
+    "inch": "in",
+    "inches": "in",
+    '"': "in",
+    "″": "in",
+    "hertz": "hz",
+    "kilohertz": "khz",
+    "megahertz": "mhz",
+    "gigahertz": "ghz",
+    "watt": "w",
+    "watts": "w",
+    "kilowatt": "kw",
+    "kilowatts": "kw",
+    "megabyte": "mb",
+    "megabytes": "mb",
+    "gigabyte": "gb",
+    "gigabytes": "gb",
+    "terabyte": "tb",
+    "terabytes": "tb",
+    "core": "cores",
+    "thread": "threads",
+    "slot": "slots",
 }
 
 _NUMBER_RE = re.compile(r"[-+]?\d*[.,]?\d+")

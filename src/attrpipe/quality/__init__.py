@@ -6,6 +6,17 @@ regression gate (docs/06 §2, docs/09 §3) and by operational dashboards
 accuracy, and RAG route distribution.
 """
 
+from attrpipe.quality.benchmark import (
+    AttributeOutcome,
+    BenchmarkCase,
+    BenchmarkReport,
+    CaseResult,
+    GroupMetrics,
+    discover_cases,
+    evaluate,
+    evaluate_root,
+    run_case,
+)
 from attrpipe.quality.metrics import (
     answer_accuracy,
     auto_map_rate,
@@ -15,9 +26,18 @@ from attrpipe.quality.metrics import (
 )
 
 __all__ = [
+    "AttributeOutcome",
+    "BenchmarkCase",
+    "BenchmarkReport",
+    "CaseResult",
+    "GroupMetrics",
     "answer_accuracy",
     "auto_map_rate",
+    "discover_cases",
+    "evaluate",
+    "evaluate_root",
     "grounding_rate",
     "route_distribution",
+    "run_case",
     "tier_distribution",
 ]

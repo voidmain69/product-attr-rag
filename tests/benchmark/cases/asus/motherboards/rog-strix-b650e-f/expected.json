@@ -1,0 +1,15 @@
+{
+  "product": {
+    "brand": "ASUS",
+    "name": "ROG STRIX B650E-F GAMING WIFI",
+    "source_url": "https://www.asus.com/motherboards/rog-strix-b650e-f-gaming-wifi/"
+  },
+  "expected": {
+    "socket": "AM5",
+    "chipset": "B650E",
+    "form_factor": "ATX",
+    "memory_type": "DDR5",
+    "memory_slots": 4,
+    "max_memory": 192
+  }
+}

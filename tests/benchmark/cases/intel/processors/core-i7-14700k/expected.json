@@ -1,0 +1,16 @@
+{
+  "product": {
+    "brand": "Intel",
+    "name": "Intel Core i7-14700K",
+    "source_url": "https://www.intel.com/content/www/us/en/products/sku/236789/intel-core-i7-processor-14700k/specifications.html"
+  },
+  "expected": {
+    "cores": 20,
+    "threads": 28,
+    "cpu_base_clock": 3.4,
+    "cpu_boost_clock": 5.6,
+    "cache": 33,
+    "tdp": 125,
+    "socket": "FCLGA1700"
+  }
+}

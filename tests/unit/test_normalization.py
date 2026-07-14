@@ -95,7 +95,7 @@ class TestNormalizer:
         assert fact.canonical_value == 2300.0
         assert fact.canonical_unit == "g"
         assert fact.original_value == "2.3 kg"
-        assert fact.ontology_version == 1
+        assert fact.ontology_version == 2
 
     def test_text_attribute_trimmed(self) -> None:
         fact = self.normalizer.normalize(make_candidate("IP rating", "IP67"), "prd_1", VALID_FROM)
